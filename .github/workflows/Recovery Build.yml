@@ -29,6 +29,8 @@ jobs:
   build:
     if: github.event.repository.owner.id == github.event.sender.id
     runs-on: ubuntu-latest
+    env:
+      WORK_DIR: /home/runner/fox_12.1
     steps:
       - name: Cleanup
         uses: rokibhasansagar/slimhub_actions@main
@@ -43,17 +45,17 @@ jobs:
           git clone https://gitlab.com/OrangeFox/sync.git
           cd sync
           chmod +x orangefox_sync.sh
-          ./orangefox_sync.sh --branch ${{ github.event.inputs.MANIFEST_BRANCH }} --path ~/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
+          ./orangefox_sync.sh --branch ${{ github.event.inputs.MANIFEST_BRANCH }} --path $WORK_DIR
 
       - name: Clone Device Tree
         run: |
-          cd ~/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
+          cd $WORK_DIR
           rm -rf ${{ github.event.inputs.DEVICE_PATH }}
           git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ${{ github.event.inputs.DEVICE_PATH }}
 
       - name: Build Recovery
         run: |
-          cd ~/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
+          cd $WORK_DIR
           source build/envsetup.sh
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
           make ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
@@ -62,7 +64,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            ~/fox_${{ github.event.inputs.MANIFEST_BRANCH }}/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/${{ github.event.inputs.BUILD_TARGET }}.img
+            /home/runner/fox_12.1/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/${{ github.event.inputs.BUILD_TARGET }}.img
           name: OFRP-${{ github.event.inputs.DEVICE_NAME }}-${{ github.run_number }}
           tag_name: ${{ github.run_id }}
         env:
