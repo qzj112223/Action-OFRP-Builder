@@ -45,17 +45,19 @@ jobs:
           git clone https://gitlab.com/OrangeFox/sync.git
           cd sync
           chmod +x orangefox_sync.sh
-          ./orangefox_sync.sh --branch ${{ github.event.inputs.MANIFEST_BRANCH }} --path $WORK_DIR
+          ./orangefox_sync.sh --branch ${{ github.event.inputs.MANIFEST_BRANCH }} --path $HOME/fox_12.1
+          echo "=== 同步完成后目录内容 ==="
+          ls -la $HOME/fox_12.1/
 
       - name: Clone Device Tree
         run: |
-          cd $WORK_DIR
+          cd $HOME/fox_12.1
           rm -rf ${{ github.event.inputs.DEVICE_PATH }}
           git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ${{ github.event.inputs.DEVICE_PATH }}
 
       - name: Build Recovery
         run: |
-          cd $WORK_DIR
+          cd $HOME/fox_12.1
           source build/envsetup.sh
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
           make ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
