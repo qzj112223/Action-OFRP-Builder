@@ -1,6 +1,13 @@
+<<<<<<< HEAD
 name: OFRP
 
 on: workflow_dispatch
+=======
+name: Orange Fox Build
+
+on:
+  workflow_dispatch:
+>>>>>>> 40ad173a3e0ddaa6e5af427acc8d6ddbc6bbad3c
 
 jobs:
   build:
@@ -12,6 +19,14 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y git repo rsync python3 cpio gzip -qq
 
+<<<<<<< HEAD
+=======
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git repo rsync python3 python3-pip cpio gzip
+
+>>>>>>> 40ad173a3e0ddaa6e5af427acc8d6ddbc6bbad3c
       - name: Sync Source
         run: |
           cd /home/runner
@@ -19,6 +34,7 @@ jobs:
           cd sync
           chmod +x orangefox_sync.sh
           ./orangefox_sync.sh --branch 12.1 --path /home/runner/fox_12.1
+<<<<<<< HEAD
           echo "Done syncing"
           ls /home/runner/fox_12.1/
           echo "SRC=/home/runner/fox_12.1" >> $GITHUB_ENV
@@ -32,14 +48,53 @@ jobs:
       - name: Build
         run: |
           cd $SRC
+=======
+          echo "SYNC_DONE"
+
+      - name: Find Source
+        run: |
+          echo "=== 搜索 fox 目录 ==="
+          find /home/runner -maxdepth 2 -type d -name "fox*" 2>/dev/null
+          echo "=== 搜索 build/envsetup ==="
+          find /home/runner -maxdepth 4 -name "envsetup.sh" -path "*/build/*" 2>/dev/null
+
+      - name: Clone Device Tree
+        run: |
+          SRC=$(find /home/runner -maxdepth 3 -name "envsetup.sh" -path "*/build/*" 2>/dev/null | head -1 | sed 's|/build/envsetup.sh||')
+          echo "SRC=$SRC"
+          cd "$SRC"
+          rm -rf device/huawei/mrr_w29
+          git clone https://github.com/qzj112223/device_huawei_mrr_w29 -b main device/huawei/mrr_w29
+          echo "DEVICE_CLONED"
+
+      - name: Build
+        run: |
+          SRC=$(find /home/runner -maxdepth 3 -name "envsetup.sh" -path "*/build/*" 2>/dev/null | head -1 | sed 's|/build/envsetup.sh||')
+          cd "$SRC"
+>>>>>>> 40ad173a3e0ddaa6e5af427acc8d6ddbc6bbad3c
           source build/envsetup.sh
           lunch omni_mrr_w29-eng
           make recoveryimage -j$(nproc --all)
 
+<<<<<<< HEAD
       - uses: softprops/action-gh-release@v1
         with:
           files: $SRC/out/target/product/mrr_w29/recovery.img
           name: mrr_w29-OFRP-${{ github.run_id }}
           tag_name: r-${{ github.run_id }}
+=======
+      - name: Upload
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            recovery.img
+          name: mrr_w29-OFRP
+          tag_name: build-${{ github.run_id }}
+>>>>>>> 40ad173a3e0ddaa6e5af427acc8d6ddbc6bbad3c
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Find Output
+        if: failure()
+        run: |
+          find /home/runner -name "*.img" -size +10M 2>/dev/null | head -10
