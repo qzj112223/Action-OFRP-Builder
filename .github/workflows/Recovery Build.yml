@@ -8,7 +8,7 @@ on:
         default: 'https://gitlab.com/OrangeFox/sync.git'
       MANIFEST_BRANCH:
         description: 'MANIFEST_BRANCH'
-        default: '12.1'
+        default: 'fox_12.1'
       DEVICE_TREE_URL:
         description: 'DEVICE_TREE_URL'
         default: 'https://github.com/qzj112223/device_huawei_mrr_w29'
