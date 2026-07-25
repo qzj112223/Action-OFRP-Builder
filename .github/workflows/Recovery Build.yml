@@ -1,73 +1,64 @@
-name: Recovery Build
+name: Orange Fox Build
 
 on:
   workflow_dispatch:
-    inputs:
-      MANIFEST_BRANCH:
-        description: 'MANIFEST_BRANCH'
-        default: '12.1'
-      DEVICE_TREE_URL:
-        description: 'DEVICE_TREE_URL'
-        default: 'https://github.com/qzj112223/device_huawei_mrr_w29'
-      DEVICE_TREE_BRANCH:
-        description: 'DEVICE_TREE_BRANCH'
-        default: 'main'
-      DEVICE_PATH:
-        description: 'DEVICE_PATH'
-        default: 'device/huawei/mrr_w29'
-      DEVICE_NAME:
-        description: 'DEVICE_NAME'
-        default: 'mrr_w29'
-      MAKEFILE_NAME:
-        description: 'MAKEFILE_NAME'
-        default: 'omni_mrr_w29'
-      BUILD_TARGET:
-        description: 'BUILD_TARGET'
-        default: 'recovery'
 
 jobs:
   build:
-    if: github.event.repository.owner.id == github.event.sender.id
     runs-on: ubuntu-latest
-    env:
-      WORK_DIR: /home/runner/fox_12.1
     steps:
       - name: Cleanup
         uses: rokibhasansagar/slimhub_actions@main
 
-      - name: Prepare
+      - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y git repo rsync openssl python3 python3-pip
+          sudo apt-get install -y git repo rsync python3 python3-pip cpio gzip
 
-      - name: Sync OrangeFox Source
+      - name: Sync Source
         run: |
+          cd /home/runner
           git clone https://gitlab.com/OrangeFox/sync.git
           cd sync
           chmod +x orangefox_sync.sh
-          ./orangefox_sync.sh --branch ${{ github.event.inputs.MANIFEST_BRANCH }} --path $HOME/fox_12.1
-          echo "=== 同步完成后目录内容 ==="
-          ls -la $HOME/fox_12.1/
+          ./orangefox_sync.sh --branch 12.1 --path /home/runner/fox_12.1
+          echo "SYNC_DONE"
+
+      - name: Find Source
+        run: |
+          echo "=== 搜索 fox 目录 ==="
+          find /home/runner -maxdepth 2 -type d -name "fox*" 2>/dev/null
+          echo "=== 搜索 build/envsetup ==="
+          find /home/runner -maxdepth 4 -name "envsetup.sh" -path "*/build/*" 2>/dev/null
 
       - name: Clone Device Tree
         run: |
-          cd $HOME/fox_12.1
-          rm -rf ${{ github.event.inputs.DEVICE_PATH }}
-          git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ${{ github.event.inputs.DEVICE_PATH }}
+          SRC=$(find /home/runner -maxdepth 3 -name "envsetup.sh" -path "*/build/*" 2>/dev/null | head -1 | sed 's|/build/envsetup.sh||')
+          echo "SRC=$SRC"
+          cd "$SRC"
+          rm -rf device/huawei/mrr_w29
+          git clone https://github.com/qzj112223/device_huawei_mrr_w29 -b main device/huawei/mrr_w29
+          echo "DEVICE_CLONED"
 
-      - name: Build Recovery
+      - name: Build
         run: |
-          cd $HOME/fox_12.1
+          SRC=$(find /home/runner -maxdepth 3 -name "envsetup.sh" -path "*/build/*" 2>/dev/null | head -1 | sed 's|/build/envsetup.sh||')
+          cd "$SRC"
           source build/envsetup.sh
-          lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
-          make ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
+          lunch omni_mrr_w29-eng
+          make recoveryimage -j$(nproc --all)
 
-      - name: Upload to Release
+      - name: Upload
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            /home/runner/fox_12.1/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/${{ github.event.inputs.BUILD_TARGET }}.img
-          name: OFRP-${{ github.event.inputs.DEVICE_NAME }}-${{ github.run_number }}
-          tag_name: ${{ github.run_id }}
+            recovery.img
+          name: mrr_w29-OFRP
+          tag_name: build-${{ github.run_id }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Find Output
+        if: failure()
+        run: |
+          find /home/runner -name "*.img" -size +10M 2>/dev/null | head -10
